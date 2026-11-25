@@ -3,9 +3,23 @@ services:
     name: kavacha
     runtime: docker
     plan: free
-    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
     envVars:
+      - key: FLASK_ENV
+        value: production
       - key: SECRET_KEY
         generateValue: true
       - key: JWT_SECRET
         generateValue: true
+      - key: TRUST_PROXY
+        value: "1"
+      - key: ANALYSIS_MAX_PAGES
+        value: "1"
+      - key: OCR_LANGUAGES
+        value: "eng,kan"
+      # The image is pre-seeded. Set to 1 only when a persistent disk is mounted
+      # and the database may be empty.
+      - key: SEED_ON_START
+        value: "0"

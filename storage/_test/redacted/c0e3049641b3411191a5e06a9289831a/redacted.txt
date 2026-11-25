@@ -1,7 +1,0 @@
-TEST DOCUMENT
-OFFER OF EMPLOYMENT
-Candidate: Priya Sharma
-Aadhaar: XXXX XXXX 8903   PAN: *****1234*
-Bank ACCOUNT **********7890   IFSC: HDFC0***34
-Contact: +91 98765 43210   Email: h***@example.com
-Salary: 45,000 per month
