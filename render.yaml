@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: kavacha
+    runtime: docker
+    plan: free
+    branch: main
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
