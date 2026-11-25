@@ -9,6 +9,7 @@ The included `render.yaml` deploys this service on Render's free plan.
 | File | Purpose |
 |------|---------|
 | `Dockerfile` | Builds the React app, installs Python dependencies and Tesseract, seeds the demo data, starts gunicorn. |
+| `backend/Dockerfile` | Self-contained variant for a service whose Root Directory is `backend`; serves the prebuilt bundle in `backend/frontend`. |
 | `backend/docker-entrypoint.sh` | Optional startup seed (`SEED_ON_START=1`) and the gunicorn command. |
 | `render.yaml` | Render Blueprint: Docker runtime, free plan, health check, generated secrets. |
 | `.dockerignore` | Keeps secrets, databases, uploads, virtualenvs and `node_modules` out of the image. |
@@ -114,18 +115,38 @@ Generate each random value with:
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
+### If the service is rooted at `backend/`
+
+A manual service can have **Root Directory** set to `backend`. Render then builds
+`backend/Dockerfile`, which does not have access to the React sources. This repository
+therefore keeps a prebuilt copy of the UI in `backend/frontend`; that Dockerfile serves
+it, forces production settings, installs Kannada OCR and seeds the demo data.
+
+When you change the frontend, refresh that copy before pushing:
+
+```powershell
+cd frontend
+npm run build:backend
+```
+
+`npm run build:backend` writes the production bundle directly to `backend/frontend`.
+Commit the updated files. The earlier KAVACHA TRUST deployment uses this layout; the
+root `Dockerfile` and Blueprint remain the preferred layout for new services.
+
 ---
 
 ## 3. Verify the live site
 
 The first build takes roughly 5–10 minutes. When Render reports **Live**:
 
-1. Open `https://kavacha.onrender.com` (or the exact URL shown by Render; the name may
-   get a suffix if it is already taken).
-2. Open `https://kavacha.onrender.com/api/health` — expect HTTP 200 with
-   `"status": "ok"`.
-3. Sign in with a demo account.
-4. Create a verification report and scan its QR code. On Render the report link uses
+1. Open the exact URL shown in the Render dashboard (for example
+   `https://kavacha-trust.onrender.com`). Do not assume the hostname; another service
+   may already own a similar name.
+2. Open `<your-url>/api/health` — expect HTTP 200 with `"status": "ok"`.
+3. Open `<your-url>/api/meta` — expect `"environment": "production"`, one analysis page
+   and `eng, kan` in the installed OCR languages.
+4. Sign in with a demo account and confirm the seeded documents appear.
+5. Create a verification report and scan its QR code. On Render the report link uses
    the live `onrender.com` domain automatically, because the backend reads
    `RENDER_EXTERNAL_URL` and the frontend sends its current origin.
 
@@ -183,14 +204,19 @@ git push
 Render redeploys automatically. The demo database resets because the free plan has no
 persistent disk.
 
+If the service is rooted at `backend/`, also run `npm run build:backend` in `frontend/`
+after any UI change and commit `backend/frontend`; otherwise the live UI stays on the
+previous build.
+
 ---
 
 ## Troubleshooting
 
 | Symptom | Likely cause and fix |
 |---------|----------------------|
-| The site root shows JSON (`"service": "KAVACHA API"`) instead of the React app | The service is building a backend-only image. Set **Root Directory** to the repository root (blank), **Dockerfile Path** to `./Dockerfile`, clear any Docker/Start Command, and set **Health Check Path** to `/api/health`. Or create a fresh Blueprint from `render.yaml`. |
-| `/api/meta` reports `"environment": "development"` | `FLASK_ENV=production` is not set on the service. Add it, or use the Blueprint, which sets it. |
+| The site root shows JSON (`"service": "KAVACHA API"`) instead of the React app | The service is building an older backend-only image. If **Root Directory** is `backend`, use the current `backend/Dockerfile` (it serves `backend/frontend`). Otherwise set **Root Directory** blank, **Dockerfile Path** `./Dockerfile`, clear any Docker/Start Command, and set **Health Check Path** `/api/health`. |
+| `/api/meta` reports `"environment": "development"` | `FLASK_ENV=production` is not set. The current `backend/Dockerfile` sets it; for a manual root build add it as an environment variable. |
+| The UI is an older version after a deploy | The service builds `backend/Dockerfile`, which serves the prebuilt copy. Run `npm run build:backend` in `frontend/`, commit `backend/frontend`, and push. |
 | Build fails with `COPY frontend/... not found` | The frontend was committed as an empty submodule. Commit the real `frontend/` files (package.json, src, lockfile) and use the root Dockerfile. |
 | Build fails at `npm ci` | `frontend/package-lock.json` is missing or out of sync. Commit it; do not delete it. |
 | Build fails installing Tesseract | The base image must stay Debian-based (`python:3.12-slim-bookworm`). |
