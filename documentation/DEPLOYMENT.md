@@ -189,6 +189,9 @@ persistent disk.
 
 | Symptom | Likely cause and fix |
 |---------|----------------------|
+| The site root shows JSON (`"service": "KAVACHA API"`) instead of the React app | The service is building a backend-only image. Set **Root Directory** to the repository root (blank), **Dockerfile Path** to `./Dockerfile`, clear any Docker/Start Command, and set **Health Check Path** to `/api/health`. Or create a fresh Blueprint from `render.yaml`. |
+| `/api/meta` reports `"environment": "development"` | `FLASK_ENV=production` is not set on the service. Add it, or use the Blueprint, which sets it. |
+| Build fails with `COPY frontend/... not found` | The frontend was committed as an empty submodule. Commit the real `frontend/` files (package.json, src, lockfile) and use the root Dockerfile. |
 | Build fails at `npm ci` | `frontend/package-lock.json` is missing or out of sync. Commit it; do not delete it. |
 | Build fails installing Tesseract | The base image must stay Debian-based (`python:3.12-slim-bookworm`). |
 | Health check returns 503 | Open the Render logs. The response names the failing check: database, storage or OCR. |
